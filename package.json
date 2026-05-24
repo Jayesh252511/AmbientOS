@@ -1,0 +1,33 @@
+{
+  "name": "ambientos",
+  "version": "1.0.0",
+  "description": "AmbientOS — Futuristic Ambient Desktop Notification Overlay",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "node server.js",
+    "electron": "electron ."
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "google-auth-library": "^9.0.0",
+    "googleapis": "^134.0.0",
+    "open": "^9.1.0",
+    "ws": "^8.16.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "ambient",
+    "overlay",
+    "notification",
+    "desktop",
+    "futuristic"
+  ],
+  "author": "AmbientOS",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^41.7.0"
+  }
+}

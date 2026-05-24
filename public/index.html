@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AmbientOS</title>
+  <meta name="description" content="Futuristic ambient desktop notification overlay system">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="ambient-body">
+
+  <!-- Main overlay canvas — all planes render here -->
+  <div id="ambient-overlay" class="overlay-container" aria-hidden="true"></div>
+
+  <!-- HUD corner widget: auth status + toggle -->
+  <div id="ambientos-hud" class="hud-widget">
+    <span id="hud-dot" class="hud-status-dot demo"></span>
+    <span id="hud-label">AmbientOS • Demo</span>
+  </div>
+
+  <!-- First-time setup panel (shown only before Google auth) -->
+  <div id="setup-panel" class="setup-panel hidden">
+    <div class="setup-inner">
+      <div class="setup-logo">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <circle cx="14" cy="14" r="13" stroke="rgba(0,229,255,0.6)" stroke-width="1.5"/>
+          <path d="M8 14 L20 8 L17 14 L20 20 Z" fill="rgba(0,229,255,0.9)"/>
+        </svg>
+        <span>AmbientOS</span>
+      </div>
+      <p class="setup-desc">Connect Google to receive live notifications from Calendar, Gmail & YouTube.</p>
+      <a href="/auth" class="setup-auth-btn" target="_blank">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right:6px">
+          <path d="M8 2C4.686 2 2 4.686 2 8s2.686 6 6 6 6-2.686 6-6-2.686-6-6-6zm3.5 6.5h-3v3h-1v-3h-3v-1h3v-3h1v3h3v1z"/>
+        </svg>
+        Connect Google Account
+      </a>
+      <p class="setup-dismiss" id="setup-dismiss-btn">Continue in demo mode →</p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
