@@ -14,6 +14,82 @@
 'use strict';
 
 /* ─────────────────────────────────────────────────────────
+   AmbientOS v2.5 — Web Audio Procedural Synthesizer
+   ───────────────────────────────────────────────────────── */
+class WebAudioSynth {
+  static play() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+
+      // ── Whoosh Effect (Low-pass filtered white noise sweep) ──
+      const bufferSize = ctx.sampleRate * 1.5; // 1.5 seconds
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.Q.value = 5.0;
+      
+      // Sweep filter frequency from 150Hz to 1200Hz then back down to 100Hz
+      filter.frequency.setValueAtTime(150, ctx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + 0.5);
+      filter.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 1.5);
+      
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.001, ctx.currentTime);
+      noiseGain.gain.linearRampToValueAtTime(0.07, ctx.currentTime + 0.4);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+      
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+      
+      // Start Whoosh
+      noise.start();
+      noise.stop(ctx.currentTime + 1.5);
+
+      // ── Glowing Chime Effect (Tuned Bell/Sine with exponential decay) ──
+      // Use 3 frequencies to form a nice cyber chime: root, perfect 5th, octave
+      const now = ctx.currentTime + 0.35; // start chime slightly delayed after the whoosh peak
+      const freqs = [523.25, 783.99, 1046.50]; // C5, G5, C6 (crystal chord)
+      
+      freqs.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const oscGain = ctx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        
+        // Decay speed: root decays slower, octave decays fast
+        const decayTime = 1.6 - (idx * 0.4);
+        const volume = 0.05 / (idx + 1); // balance volume
+        
+        oscGain.gain.setValueAtTime(0.001, now);
+        oscGain.gain.linearRampToValueAtTime(volume, now + 0.05);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, now + decayTime);
+        
+        osc.connect(oscGain);
+        oscGain.connect(ctx.destination);
+        
+        osc.start(now);
+        osc.stop(now + decayTime + 0.1);
+      });
+      
+    } catch (e) {
+      console.warn('[AmbientOS Synth] AudioContext play failed:', e.message);
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────
    AIRCRAFT DESIGNS — 3 futuristic SVG silhouettes
    ───────────────────────────────────────────────────────── */
 const AIRCRAFT = {
@@ -257,13 +333,13 @@ class PlaneFactory {
 
     wrapper.innerHTML = `
       <div class="aircraft-bobber" style="--bob-duration:${bobDuration}s; --bob-delay:${bobDelay}s;">
-        <div class="ambient-banner priority-${priority}">
+        <div class="ambient-banner priority-${priority} type-${type}">
           <span class="banner-icon-container">${iconSvg}</span>
           <span class="banner-text">${this._escapeHtml(text)}</span>
         </div>
         <div class="ambient-rope">
           <svg width="40" height="24" viewBox="0 0 40 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M 0 2 L 40 12 L 0 22" stroke="rgba(255, 0, 127, 0.65)" stroke-width="1.8" stroke-linecap="round" />
+            <path d="M 0 2 L 40 12 L 0 22" stroke="var(--color-low)" stroke-width="1.8" stroke-linecap="round" />
           </svg>
         </div>
         <div class="ambient-plane">
@@ -294,6 +370,24 @@ class PlaneFactory {
         <svg class="banner-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path>
           <polygon points="9.75,15.02 15.5,11.75 9.75,8.48" fill="currentColor"></polygon>
+        </svg>`,
+      weather: `
+        <svg class="banner-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          <circle cx="12" cy="12" r="4"></circle>
+        </svg>`,
+      system: `
+        <svg class="banner-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+          <rect x="9" y="9" width="6" height="6"></rect>
+          <line x1="9" y1="1" x2="9" y2="4"></line>
+          <line x1="15" y1="1" x2="15" y2="4"></line>
+          <line x1="9" y1="20" x2="9" y2="23"></line>
+          <line x1="15" y1="20" x2="15" y2="23"></line>
+          <line x1="20" y1="9" x2="23" y2="9"></line>
+          <line x1="20" y1="15" x2="23" y2="15"></line>
+          <line x1="1" y1="9" x2="4" y2="9"></line>
+          <line x1="1" y1="15" x2="4" y2="15"></line>
         </svg>`,
       default: `
         <svg class="banner-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -421,6 +515,41 @@ class AmbientOS {
         this._startDemoMode();
       }
     }, 4000);
+
+    // Interactive Cyberpunk Theme Switcher
+    const hud = document.getElementById('ambientos-hud');
+    if (hud) {
+      this.activeTheme = 'cyberpink';
+      this.themes = ['cyberpink', 'neonmint', 'lasercyan'];
+      
+      hud.addEventListener('click', () => {
+        const nextIdx = (this.themes.indexOf(this.activeTheme) + 1) % this.themes.length;
+        const nextTheme = this.themes[nextIdx];
+        
+        // Remove old theme classes
+        document.body.classList.remove(...this.themes.map(t => `theme-${t}`));
+        
+        // Add new theme class
+        if (nextTheme !== 'cyberpink') {
+          document.body.classList.add(`theme-${nextTheme}`);
+        }
+        
+        this.activeTheme = nextTheme;
+        console.log(`[AmbientOS Theme] Switched to: ${nextTheme}`);
+        
+        // Show temporary visual feedback inside HUD label
+        const originalText = this.hudLabel.textContent;
+        const displayName = nextTheme === 'cyberpink' ? 'Cyberpink' : nextTheme === 'neonmint' ? 'Neon Mint' : 'Laser Cyan';
+        this.hudLabel.textContent = `Theme: ${displayName}`;
+        
+        // Play synthesizer chime to acknowledge the click!
+        WebAudioSynth.play();
+        
+        setTimeout(() => {
+          this.hudLabel.textContent = originalText;
+        }, 1800);
+      });
+    }
   }
 
   // ── Handle incoming WebSocket messages ──
@@ -509,6 +638,9 @@ class AmbientOS {
     this.activePlanes++;
 
     console.log(`[Spawn] Spawning plane in lane ${laneIndex} at Y: ${yPx}px for: "${notification.text}"`);
+
+    // Trigger the procedural synth sweep and bell chime
+    WebAudioSynth.play();
 
     const el = this.factory.create(notification);
     this.overlay.appendChild(el);

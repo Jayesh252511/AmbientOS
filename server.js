@@ -10,6 +10,8 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
+const os = require('os');
+const { exec } = require('child_process');
 const { createOAuth2Client, getAuthUrl, exchangeCodeForTokens, isAuthenticated } = require('./auth');
 const { fetchAllNotifications, getNextDemoNotification } = require('./notifications');
 
@@ -194,8 +196,154 @@ app.post('/notify', express.json(), (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────
-// Boot
+// AmbientOS v2.5 — System Vitals & Live Weather Polling
 // ─────────────────────────────────────────────────────────
+
+// Helper to get CPU Usage percentage
+function getCPUTicks() {
+  const cpus = os.cpus();
+  let totalIdle = 0, totalTick = 0;
+  if (!cpus) return { idle: 0, total: 0 };
+  cpus.forEach(cpu => {
+    for (let type in cpu.times) {
+      totalTick += cpu.times[type];
+    }
+    totalIdle += cpu.times.idle;
+  });
+  return { idle: totalIdle, total: totalTick };
+}
+
+function getCPUUsage() {
+  return new Promise((resolve) => {
+    const start = getCPUTicks();
+    setTimeout(() => {
+      const end = getCPUTicks();
+      const idleDiff = end.idle - start.idle;
+      const totalDiff = end.total - start.total;
+      if (totalDiff === 0) return resolve(0);
+      const usage = 100 - Math.round((100 * idleDiff) / totalDiff);
+      resolve(usage);
+    }, 500);
+  });
+}
+
+// Map Weather Codes to Icons & Descriptions
+function getWeatherDesc(code) {
+  const codes = {
+    0: 'Clear Sky',
+    1: 'Mainly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
+    45: 'Foggy', 48: 'Foggy',
+    51: 'Light Drizzle', 53: 'Moderate Drizzle', 55: 'Dense Drizzle',
+    61: 'Slight Rain', 63: 'Moderate Rain', 65: 'Heavy Rain',
+    71: 'Slight Snow', 73: 'Moderate Snow', 75: 'Heavy Snow',
+    80: 'Rain Showers', 81: 'Rain Showers', 82: 'Heavy Rain Showers',
+    95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm'
+  };
+  return codes[code] || 'Misty';
+}
+
+// Fetch Geolocation and Weather
+async function pollWeather() {
+  try {
+    console.log('[AmbientOS Weather] Fetching IP-based geolocation...');
+    const geoRes = await fetch('https://ipapi.co/json/');
+    if (!geoRes.ok) throw new Error('Location service unavailable');
+    const geo = await geoRes.json();
+    const { latitude, longitude, city } = geo;
+
+    if (!latitude || !longitude) throw new Error('Invalid coordinate data');
+
+    console.log(`[AmbientOS Weather] Location detected: ${city} (${latitude}, ${longitude})`);
+    
+    const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+    if (!weatherRes.ok) throw new Error('Weather API service unavailable');
+    const weather = await weatherRes.json();
+    const current = weather.current_weather;
+
+    if (!current) throw new Error('No weather data received');
+
+    const temp = Math.round(current.temperature);
+    const desc = getWeatherDesc(current.weathercode);
+    const text = `Weather -> ${desc} • ${temp}°C in ${city}`;
+
+    console.log(`[AmbientOS Weather] Current condition: ${desc}, ${temp}°C`);
+    broadcast({
+      type: 'notification',
+      notificationType: 'weather',
+      text,
+      priority: 'low'
+    });
+  } catch (err) {
+    console.error('[AmbientOS Weather] Fetch failed:', err.message);
+  }
+}
+
+// Fetch System Vitals (RAM, CPU, Windows Battery)
+async function pollSystemVitals() {
+  try {
+    console.log('[AmbientOS System] Gathering OS metrics...');
+    const cpu = await getCPUUsage();
+    
+    // RAM Calculation
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const ram = 100 - Math.round((100 * freeMem) / totalMem);
+
+    // Battery checking via PowerShell (Windows only)
+    if (process.platform === 'win32') {
+      exec('powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Battery | Select EstimatedChargeRemaining, BatteryStatus | ConvertTo-Json"', (err, stdout) => {
+        let batteryText = '';
+        let priority = 'low';
+
+        if (!err && stdout.trim()) {
+          try {
+            const data = JSON.parse(stdout.trim());
+            const percent = data.EstimatedChargeRemaining;
+            const status = data.BatteryStatus; // 1 = discharging, 2 = AC, 3 = fully charged
+            
+            if (percent !== undefined && percent !== null) {
+              const state = (status === 2 || status === 3) ? 'Charging' : 'Discharging';
+              batteryText = ` • Battery: ${percent}% (${state})`;
+              if (percent < 20 && status !== 2) {
+                priority = 'urgent';
+              }
+            }
+          } catch (e) {
+            // No battery hardware (desktop PC) or JSON parsing failed
+          }
+        }
+
+        // Broadcast System Vitals Plane
+        const text = `System -> CPU: ${cpu}% • RAM: ${ram}%${batteryText}`;
+        console.log(`[AmbientOS System] CPU: ${cpu}%, RAM: ${ram}%${batteryText}`);
+        
+        broadcast({
+          type: 'notification',
+          notificationType: 'system',
+          text,
+          priority: priority === 'urgent' ? 'urgent' : (ram > 85 || cpu > 90) ? 'medium' : 'low'
+        });
+      });
+    } else {
+      // Non-Windows fallback
+      const text = `System -> CPU: ${cpu}% • RAM: ${ram}%`;
+      broadcast({
+        type: 'notification',
+        notificationType: 'system',
+        text,
+        priority: (ram > 85 || cpu > 90) ? 'medium' : 'low'
+      });
+    }
+  } catch (err) {
+    console.error('[AmbientOS System] Metrics failed:', err.message);
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// Global background timers for vitals and weather
+let vitalsTimer = null;
+let weatherTimer = null;
+
 server.listen(PORT, () => {
   console.log('');
   console.log('  ╔═══════════════════════════════════════╗');
@@ -214,6 +362,14 @@ server.listen(PORT, () => {
     console.log('');
     startDemoMode();
   }
+
+  // Geolocation & Weather polling (every 30 minutes)
+  setTimeout(pollWeather, 3000); // 3 seconds initial delay
+  weatherTimer = setInterval(pollWeather, 30 * 60 * 1000);
+
+  // System Vitals polling (every 3 minutes)
+  setTimeout(pollSystemVitals, 8000); // 8 seconds initial delay
+  vitalsTimer = setInterval(pollSystemVitals, 3 * 60 * 1000);
 });
 
 // Graceful shutdown
@@ -221,5 +377,7 @@ process.on('SIGINT', () => {
   console.log('\n[AmbientOS] Shutting down gracefully...');
   if (pollTimer) clearInterval(pollTimer);
   if (demoTimer) clearInterval(demoTimer);
+  if (vitalsTimer) clearInterval(vitalsTimer);
+  if (weatherTimer) clearInterval(weatherTimer);
   server.close(() => process.exit(0));
 });

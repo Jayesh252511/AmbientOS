@@ -267,7 +267,7 @@ html, body {
   border-radius: 100px;
   z-index: 1000000;
   pointer-events: auto;
-  cursor: default;
+  cursor: pointer; /* Clickable theme cycle trigger */
   opacity: 0.15; /* Almost invisible so it never interferes with your view */
   transition: all 0.25s ease-in-out;
 }
@@ -399,3 +399,98 @@ body.demo-active {
 .banner-icon {
   display: block;
 }
+
+/* ─────────────────────────────────────────────────────────
+   AmbientOS v2.5 — Cyberpunk Interactive Themes
+   ───────────────────────────────────────────────────────── */
+
+/* Cyberpunk Neon Mint Theme variables */
+body.theme-neonmint {
+  --color-low: #34c759;
+  --glass-bg: rgba(8, 20, 12, 0.90);
+  --glass-border: rgba(52, 199, 89, 0.45);
+  --glass-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+}
+
+/* Cyberpunk Laser Cyan Theme variables */
+body.theme-lasercyan {
+  --color-low: #00e5ff;
+  --glass-bg: rgba(6, 16, 20, 0.90);
+  --glass-border: rgba(0, 229, 255, 0.45);
+  --glass-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+}
+
+/* ─────────────────────────────────────────────────────────
+   Category-Specific Banner Glowing Overrides
+   ───────────────────────────────────────────────────────── */
+
+/* 1. Google Calendar (Meetings) -> Hot Red/Magenta Glow */
+.ambient-banner.type-calendar {
+  border-color: rgba(255, 59, 48, 0.5);
+  box-shadow: var(--glass-shadow), 0 0 24px rgba(255, 59, 48, 0.28);
+}
+.ambient-banner.type-calendar::before {
+  background: 
+    linear-gradient(90deg, transparent, rgba(255, 59, 48, 0.45)) 0 18%,
+    linear-gradient(90deg, transparent, rgba(255, 59, 48, 0.65)) 0 50%,
+    linear-gradient(90deg, transparent, rgba(255, 59, 48, 0.45)) 0 82%;
+  background-size: 100% 2px;
+  background-repeat: no-repeat;
+}
+
+/* 2. Gmail (Mail) -> Electric Blue Glow */
+.ambient-banner.type-mail {
+  border-color: rgba(0, 122, 255, 0.5);
+  box-shadow: var(--glass-shadow), 0 0 24px rgba(0, 122, 255, 0.28);
+}
+.ambient-banner.type-mail::before {
+  background: 
+    linear-gradient(90deg, transparent, rgba(0, 122, 255, 0.45)) 0 18%,
+    linear-gradient(90deg, transparent, rgba(0, 122, 255, 0.65)) 0 50%,
+    linear-gradient(90deg, transparent, rgba(0, 122, 255, 0.45)) 0 82%;
+  background-size: 100% 2px;
+  background-repeat: no-repeat;
+}
+
+/* 3. YouTube (Subscriptions) -> Bright Gold Glow */
+.ambient-banner.type-youtube {
+  border-color: rgba(255, 149, 0, 0.5);
+  box-shadow: var(--glass-shadow), 0 0 24px rgba(255, 149, 0, 0.28);
+}
+.ambient-banner.type-youtube::before {
+  background: 
+    linear-gradient(90deg, transparent, rgba(255, 149, 0, 0.45)) 0 18%,
+    linear-gradient(90deg, transparent, rgba(255, 149, 0, 0.65)) 0 50%,
+    linear-gradient(90deg, transparent, rgba(255, 149, 0, 0.45)) 0 82%;
+  background-size: 100% 2px;
+  background-repeat: no-repeat;
+}
+
+/* 4. Live Weather -> Mint Green Glow */
+.ambient-banner.type-weather {
+  border-color: rgba(52, 199, 89, 0.5);
+  box-shadow: var(--glass-shadow), 0 0 24px rgba(52, 199, 89, 0.28);
+}
+.ambient-banner.type-weather::before {
+  background: 
+    linear-gradient(90deg, transparent, rgba(52, 199, 89, 0.45)) 0 18%,
+    linear-gradient(90deg, transparent, rgba(52, 199, 89, 0.65)) 0 50%,
+    linear-gradient(90deg, transparent, rgba(52, 199, 89, 0.45)) 0 82%;
+  background-size: 100% 2px;
+  background-repeat: no-repeat;
+}
+
+/* 5. System Vitals -> Cyber Pink Glow */
+.ambient-banner.type-system {
+  border-color: rgba(255, 0, 127, 0.5);
+  box-shadow: var(--glass-shadow), 0 0 24px rgba(255, 0, 127, 0.28);
+}
+.ambient-banner.type-system::before {
+  background: 
+    linear-gradient(90deg, transparent, rgba(255, 0, 127, 0.45)) 0 18%,
+    linear-gradient(90deg, transparent, rgba(255, 0, 127, 0.65)) 0 50%,
+    linear-gradient(90deg, transparent, rgba(255, 0, 127, 0.45)) 0 82%;
+  background-size: 100% 2px;
+  background-repeat: no-repeat;
+}
+
