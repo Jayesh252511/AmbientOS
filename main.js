@@ -12,6 +12,7 @@ const path = require('path');
 // Append switches to ensure transparent visual support is enabled at the OS level
 app.commandLine.appendSwitch('enable-transparent-visuals');
 app.commandLine.appendSwitch('disable-gpu-sandbox');
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 // Start Express and WebSocket server inside the Electron process
 try {
