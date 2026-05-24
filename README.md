@@ -6,6 +6,8 @@
 
 ## Screenshots
 
+![AmbientOS Live Desktop Preview](screenshots/live_preview.png)
+
 ![AmbientOS Airplane HUD](screenshots/preview1.png)
 
 ![AmbientOS Interface View](screenshots/preview3.png)
