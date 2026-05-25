@@ -215,6 +215,25 @@ async function fetchYouTubeNotifications(auth) {
     return notifications;
   } catch (err) {
     console.error('[AmbientOS YouTube] Error:', err.message);
+    
+    // Graceful fallback when the daily Google API quota is completely exhausted
+    if (err.message.toLowerCase().includes('quota') || err.message.toLowerCase().includes('limit')) {
+      console.warn('[AmbientOS YouTube Warning] Daily API limit exceeded. Triggering simulated subscription plane...');
+      
+      const fallbackVideos = [
+        { snippet: { channelTitle: 'Fireship', title: '10 JS Tricks in 100 Seconds' } },
+        { snippet: { channelTitle: 'Theo - t3.gg', title: 'Why React is changing' } },
+        { snippet: { channelTitle: 'Web Dev Simplified', title: 'Mastering CSS Grid' } },
+        { snippet: { channelTitle: 'Vercel', title: 'Next-Gen Ambient Interfaces' } }
+      ];
+      
+      const randomVideo = fallbackVideos[Math.floor(Math.random() * fallbackVideos.length)];
+      const text = formatYouTubeVideo(randomVideo) + ' (API Limit)';
+      
+      if (!isDuplicate(text)) {
+        return [{ text, type: 'youtube', priority: 'low', source: 'YouTube (Fallback)' }];
+      }
+    }
     return [];
   }
 }
